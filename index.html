@@ -22,7 +22,9 @@
 
         const renderPDF = async () => {
             const pdfContainer = document.getElementById('pdfContainer');
-            pdfContainer.style.visibility = "hidden"; // 초기 숨김 (깜빡임 방지)
+
+            // 📌 PDF 로드 중에는 숨김 (깜빡임 방지)
+            pdfContainer.style.visibility = "hidden";
 
             try {
                 const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -58,7 +60,8 @@
                 pdfContainer.style.width = `${totalWidth}px`;
                 pdfContainer.style.height = `${totalHeight}px`;
 
-                
+                // 📌 PDF가 완전히 로드된 후 화면 보이기
+                pdfContainer.style.visibility = "visible";
 
                 // 📌 PDF가 완전히 로드된 후 특정 위치로 이동
                 setTimeout(() => {
@@ -88,13 +91,13 @@
 
         .pdf-container {
             width: auto;
-            
-            
+            height: auto; /* ✅ 높이 설정 */
+            min-height: 100vh; /* 📌 최소 높이 설정 */
             overflow: scroll;
             -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
-        
+            visibility: hidden; /* 📌 처음에는 숨김 (PDF 로드 후 표시) */
         }
 
         canvas {
