@@ -17,13 +17,6 @@
         const INITIAL_Y = 0; // 초기 Y 위치
 
         window.onload = () => {
-            const pdfContainer = document.getElementById('pdfContainer');
-
-            // 📌 PDF 로드 전에 먼저 스크롤 위치 설정
-            pdfContainer.scrollLeft = INITIAL_X;
-            pdfContainer.scrollTop = INITIAL_Y;
-
-            // 📌 PDF 렌더링 시작
             renderPDF();
         };
 
@@ -39,45 +32,45 @@
                 let totalWidth = 0;
                 let totalHeight = 0;
 
-                // 📌 첫 번째 페이지 먼저 로드
-                const firstPage = await pdf.getPage(1);
-                await renderPage(firstPage, pdfContainer, devicePixelRatio);
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: SCALE });
 
-                // 📌 첫 번째 페이지 로딩 후 화면 보이기
-                pdfContainer.style.visibility = "visible";
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
 
-                // 📌 나머지 페이지 비동기로 로드
-                for (let pageNum = 2; pageNum <= pdf.numPages; pageNum++) {
-                    pdf.getPage(pageNum).then(page => {
-                        renderPage(page, pdfContainer, devicePixelRatio);
-                    });
+                    canvas.width = viewport.width * devicePixelRatio;
+                    canvas.height = viewport.height * devicePixelRatio;
+
+                    canvas.style.width = `${viewport.width}px`;
+                    canvas.style.height = `${viewport.height}px`;
+
+                    context.scale(devicePixelRatio, devicePixelRatio);
+
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    pdfContainer.appendChild(canvas);
+
+                    totalWidth = Math.max(totalWidth, viewport.width);
+                    totalHeight += viewport.height;
                 }
 
-                // 📌 PDF가 완전히 로드된 후에도 스크롤 위치 유지
-                pdfContainer.scrollLeft = INITIAL_X;
-                pdfContainer.scrollTop = INITIAL_Y;
+                // 📌 컨테이너 크기를 PDF 전체 크기에 맞춤
+                pdfContainer.style.width = `${totalWidth}px`;
+                pdfContainer.style.height = `${totalHeight}px`;
+
+                
+
+                // 📌 PDF가 완전히 로드된 후 특정 위치로 이동
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        pdfContainer.scrollLeft = INITIAL_X;
+                        pdfContainer.scrollTop = INITIAL_Y;
+                    });
+                }, 100);
 
             } catch (err) {
                 console.error('PDF 렌더링 중 오류 발생:', err);
             }
-        };
-
-        // 📌 페이지를 렌더링하는 함수 (공통 사용)
-        const renderPage = async (page, pdfContainer, devicePixelRatio) => {
-            const viewport = page.getViewport({ scale: SCALE });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-
-            canvas.width = viewport.width * devicePixelRatio;
-            canvas.height = viewport.height * devicePixelRatio;
-
-            canvas.style.width = `${viewport.width}px`;
-            canvas.style.height = `${viewport.height}px`;
-
-            context.scale(devicePixelRatio, devicePixelRatio);
-
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            pdfContainer.appendChild(canvas);
         };
     </script>
 
@@ -95,13 +88,13 @@
 
         .pdf-container {
             width: auto;
-            height: auto;
-            min-height: 100vh;
+            
+            
             overflow: scroll;
             -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
-            visibility: hidden; /* 📌 처음에는 숨김 (첫 번째 페이지 로드 후 표시) */
+        
         }
 
         canvas {
