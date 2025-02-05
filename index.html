@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>While You Are Seeing</title>
+
+    <!-- PDF.js 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const pdfUrl = './thetext.pdf'; // PDF 파일 경로
+        const SCALE = 1.24; // 확대 비율
+        const INITIAL_X = 636.211 * SCALE; // 초기 X 위치
+        const INITIAL_Y = 0; // 초기 Y 위치
+
+        window.onload = () => {
+            const pdfContainer = document.getElementById('pdfContainer');
+
+            // 📌 PDF 로드 전에 먼저 스크롤 위치 설정
+            pdfContainer.scrollLeft = INITIAL_X;
+            pdfContainer.scrollTop = INITIAL_Y;
+
+            // 📌 PDF 렌더링 시작
+            renderPDF();
+        };
+
+        const renderPDF = async () => {
+            const pdfContainer = document.getElementById('pdfContainer');
+            pdfContainer.style.visibility = "hidden"; // 초기 숨김 (깜빡임 방지)
+
+            try {
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                const devicePixelRatio = isMobile ? 1.5 : window.devicePixelRatio || 1;
+
+                let totalWidth = 0;
+                let totalHeight = 0;
+
+                // 📌 첫 번째 페이지 먼저 로드
+                const firstPage = await pdf.getPage(1);
+                await renderPage(firstPage, pdfContainer, devicePixelRatio);
+
+                // 📌 첫 번째 페이지 로딩 후 화면 보이기
+                pdfContainer.style.visibility = "visible";
+
+                // 📌 나머지 페이지 비동기로 로드
+                for (let pageNum = 2; pageNum <= pdf.numPages; pageNum++) {
+                    pdf.getPage(pageNum).then(page => {
+                        renderPage(page, pdfContainer, devicePixelRatio);
+                    });
+                }
+
+                // 📌 PDF가 완전히 로드된 후에도 스크롤 위치 유지
+                pdfContainer.scrollLeft = INITIAL_X;
+                pdfContainer.scrollTop = INITIAL_Y;
+
+            } catch (err) {
+                console.error('PDF 렌더링 중 오류 발생:', err);
+            }
+        };
+
+        // 📌 페이지를 렌더링하는 함수 (공통 사용)
+        const renderPage = async (page, pdfContainer, devicePixelRatio) => {
+            const viewport = page.getViewport({ scale: SCALE });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            canvas.width = viewport.width * devicePixelRatio;
+            canvas.height = viewport.height * devicePixelRatio;
+
+            canvas.style.width = `${viewport.width}px`;
+            canvas.style.height = `${viewport.height}px`;
+
+            context.scale(devicePixelRatio, devicePixelRatio);
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            pdfContainer.appendChild(canvas);
+        };
+    </script>
+
+    <style>
+        body {
+            margin: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            width: 100vw;
+            overflow: auto;
+        }
+
+        .pdf-container {
+            width: auto;
+            height: auto;
+            min-height: 100vh;
+            overflow: scroll;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            visibility: hidden; /* 📌 처음에는 숨김 (첫 번째 페이지 로드 후 표시) */
+        }
+
+        canvas {
+            display: block;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="pdf-container" id="pdfContainer"></div>
+</body>
+</html>
